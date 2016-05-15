@@ -1,0 +1,153 @@
+---
+title: "PA_template.Rmd"
+author: "Dennis Beardsley"
+date: "May 15, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Reproducible Research Assignment # 1
+
+#####In this assignment we will use activity data to answer some questions and use a single R markdown document to display in HTML.
+
+##Loading and preprocessing the data
+##### Load any libraries that will be needed to answer all questions and read in and preprocess the data as necessary
+
+```{r}
+
+#load library 
+library("ggplot2")
+
+# read in the data
+AD <- read.csv("C:/Users/Dennis/Documents/R/Data/RepData/activity.csv")
+
+# We can ignore the missing data for calculating the mean and median
+cleanAD <- complete.cases(AD)
+
+```
+##What is mean total number of steps taken per day?
+
+#####For this question we can ignore missing values in the dataset. We will calculate (and show) the steps taken per day, create a histogram that shows steps taken per day and report the mean and median steps taken per day
+```{r}
+# Calculate the total steps taken each day
+aggStepsDay <- aggregate(steps ~ date, data = AD[cleanAD, ], sum)
+print(aggStepsDay)
+
+
+# plot histogram of steps taken each day and add median and mean vertical
+# line to the plot as well
+meanSteps <- mean(aggStepsDay$steps)
+medianSteps <- median(aggStepsDay$steps)
+
+hist(aggStepsDay$steps, main = "Histogram of Total Steps per Day", xlab = "Number of Steps")
+abline(v=meanSteps, lty=1, lwd=6, col="black")
+text(meanSteps, 20, pos=4, labels="mean", col="black")
+abline(v=medianSteps, lty=4, lwd=2, col="red")
+text(medianSteps, 15, pos=4, labels = "median", col="red")
+
+# let's show the mean and median values too
+sprintf("mean = %.1f", meanSteps)
+sprintf("median = %.1f", medianSteps)
+```
+####*The mean total number of steps taken per day is 10,766 and the median is 10,765*
+
+
+
+## What is the average daily activity pattern?
+
+#####Show a time series plot of the 5-minute interval averaged across all days and show which interval contains the maximum number of steps
+```{r}
+aggStepsInterval <- aggregate(steps ~ interval, data = AD[cleanAD, ], mean)
+                              
+plot(aggStepsInterval$interval, aggStepsInterval$steps, type = "l", main = "Average Daily Activity (steps)", xlab = "Interval", ylab = "Avg. Number of Steps")
+
+# let's show the max steps and associated interval
+maxStepIndex <- which.max(aggStepsInterval$steps)
+sprintf("The max steps are %.0f for interval %.0f", aggStepsInterval[maxStepIndex, ]$steps, aggStepsInterval[maxStepIndex, ]$interval)
+```
+####*The maximum number of steps is 206 for interval 835*
+
+
+
+
+## Imputing missing values 
+
+#####Show the number of missing days and then fill in the missing days with the average steps. Then create a histogram that shows steps taken per day and report the mean and median steps taken per day using the new data set that doesn't contain missing values
+
+```{r}
+naData <- sum(is.na(AD$steps))
+sprintf("The total number of missing values is %.0f", naData)
+
+# Now let's replace the missing values with the average steps calculated earlier
+compData <- AD
+
+for(i in 1:nrow(compData)) {
+  if (is.na(compData$steps[i])) { 
+    intervalValue <- compData$interval[i]
+    compData$steps[i] <- aggStepsInterval[aggStepsInterval$interval == intervalValue,]$steps
+    }
+}
+
+# now use the new data to create the histogram
+compStepsDay <- aggregate(steps ~ date, compData, sum)
+
+meanCompSteps <- mean(compStepsDay$steps)
+medianCompSteps <- median(compStepsDay$steps)
+
+hist(compStepsDay$steps, main="Histogram of Total Steps per Day (imputed)", xlab="Number of Steps")
+abline(v=meanCompSteps, lty=1, lwd=6, col="black")
+text(meanCompSteps, 20, pos=4, labels="mean", col="black")
+abline(v=medianCompSteps, lty=4, lwd=2, col="red")
+text(medianCompSteps, 15, pos=4, labels = "median", col="red")
+
+# let's show the new mean and median values too
+sprintf("mean = %.1f", meanCompSteps)
+sprintf("median = %.1f", medianCompSteps)
+
+diffMeanSteps <- meanSteps - meanCompSteps
+
+if (meanSteps > meanCompSteps){
+  sprintf("The imputed data reduced the mean by %.1f", abs(diffMeanSteps))
+} else if ( meanCompSteps > meanSteps){
+  sprintf("The imputed data increased the mean by %.1f", abs(diffMeanSteps))
+} else {
+  sprintf("The mean did not change; value remained %.1f", meanSteps)
+}
+
+diffMedianSteps <- medianSteps - medianCompSteps
+
+if (medianSteps > medianCompSteps){
+  sprintf("The imputed data reduced the median by %.1f", abs(diffMedianSteps))
+} else if ( medianCompSteps > medianSteps){
+  sprintf("The imputed data increased the median by %.1f", abs(diffMedianSteps))
+} else {
+  sprintf("The median did not change; value remained %.1f", medianSteps)
+}
+
+```
+####*By imputing the missing values for steps, the mean did not change but the median increased to be exactly the same as the mean, i.e. 10,766*
+
+
+##Are there differences in activity patterns between weekdays and weekends?
+
+#####Create a new factor variable to represent weekdays and weekend days and then show a panel plot with a time series with the interval and the average number of steps for weekdays and weekend days
+
+```{r}
+# create the factor variable
+compData['dayType'] <- weekdays(as.Date(compData$date))
+compData$dayType[compData$dayType %in% c('Saturday','Sunday')] <- "weekend"
+compData$dayType[compData$dayType != "weekend"] <- "weekday"
+compData$dayType <- as.factor(compData$dayType)
+
+#aggregate the data by interval and day type, i.e. weekday or weekend
+compStepsDayType <- aggregate(steps ~ interval + dayType, compData, mean)
+
+# create the panel plot, one panel for weekday and one panel for weekend
+qplot(interval, steps, data=compStepsDayType, geom=c("line"), xlab = "Interval", ylab = "Avg. Number of Steps") + facet_wrap(~ dayType, ncol =1)
+
+```
+
+####*Based on the time series data, the pattern between weekdays and weekends are relatively close although the weekdays have a higher peek number of steps.*
