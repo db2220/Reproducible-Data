@@ -5,7 +5,7 @@ date: "May 15, 2016"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
+```{r setup}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -16,13 +16,17 @@ knitr::opts_chunk$set(echo = TRUE)
 ##Loading and preprocessing the data
 ##### Load any libraries that will be needed to answer all questions and read in and preprocess the data as necessary
 
-```{r}
+```{r load}
 
-#load library 
+#load libraries
+library("knitr")
 library("ggplot2")
 
+#set the working directory
+setwd("C:/Users/Dennis/Documents/R/Scripts")
+
 # read in the data
-AD <- read.csv("C:/Users/Dennis/Documents/R/Data/RepData/activity.csv")
+AD <- read.csv("activity.csv")
 
 # We can ignore the missing data for calculating the mean and median
 cleanAD <- complete.cases(AD)
@@ -31,7 +35,7 @@ cleanAD <- complete.cases(AD)
 ##What is mean total number of steps taken per day?
 
 #####For this question we can ignore missing values in the dataset. We will calculate (and show) the steps taken per day, create a histogram that shows steps taken per day and report the mean and median steps taken per day
-```{r}
+```{r histogram1, fig.height=4}
 # Calculate the total steps taken each day
 aggStepsDay <- aggregate(steps ~ date, data = AD[cleanAD, ], sum)
 print(aggStepsDay)
@@ -41,6 +45,7 @@ print(aggStepsDay)
 # line to the plot as well
 meanSteps <- mean(aggStepsDay$steps)
 medianSteps <- median(aggStepsDay$steps)
+
 
 hist(aggStepsDay$steps, main = "Histogram of Total Steps per Day", xlab = "Number of Steps")
 abline(v=meanSteps, lty=1, lwd=6, col="black")
@@ -59,7 +64,7 @@ sprintf("median = %.1f", medianSteps)
 ## What is the average daily activity pattern?
 
 #####Show a time series plot of the 5-minute interval averaged across all days and show which interval contains the maximum number of steps
-```{r}
+```{r timeseries}
 aggStepsInterval <- aggregate(steps ~ interval, data = AD[cleanAD, ], mean)
                               
 plot(aggStepsInterval$interval, aggStepsInterval$steps, type = "l", main = "Average Daily Activity (steps)", xlab = "Interval", ylab = "Avg. Number of Steps")
@@ -77,7 +82,7 @@ sprintf("The max steps are %.0f for interval %.0f", aggStepsInterval[maxStepInde
 
 #####Show the number of missing days and then fill in the missing days with the average steps. Then create a histogram that shows steps taken per day and report the mean and median steps taken per day using the new data set that doesn't contain missing values
 
-```{r}
+```{r histogram2}
 naData <- sum(is.na(AD$steps))
 sprintf("The total number of missing values is %.0f", naData)
 
@@ -135,7 +140,7 @@ if (medianSteps > medianCompSteps){
 
 #####Create a new factor variable to represent weekdays and weekend days and then show a panel plot with a time series with the interval and the average number of steps for weekdays and weekend days
 
-```{r}
+```{r gplot}
 # create the factor variable
 compData['dayType'] <- weekdays(as.Date(compData$date))
 compData$dayType[compData$dayType %in% c('Saturday','Sunday')] <- "weekend"
